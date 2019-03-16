@@ -1,25 +1,29 @@
 import cv2
 import os
-import flip
+from detect import flip
 import logging.config
+from configs import CONFIG_PATH
+from detect.xml import XML_PATH
+
+WEB_PATH = os.path.dirname(os.path.realpath(__file__))
 
 
 class FaceDetect(object):
 
     def __init__(self, imagePathPrefix="image", imageHPathPrefix="imageH", resultPathPrefix="result", scaleFactor=1.2):
-        logging.config.fileConfig("config" + os.sep + "logger.conf")    # 采用配置文件
+
+        logging.config.fileConfig(os.path.join(CONFIG_PATH, "logger.conf"))  # 采用配置文件
         self.logger = logging.getLogger("file")
         self.imagePathPrefix = imagePathPrefix + os.sep
         self.resultPathPrefix = resultPathPrefix + os.sep
         self.imageHPathPrefix = imageHPathPrefix + os.sep
         self.scaleFactor = scaleFactor
-        if not os.path.exists(os.getcwd() + os.sep + imageHPathPrefix):
-            os.mkdir(os.getcwd() + os.sep + imageHPathPrefix)
-        if not os.path.exists(os.getcwd() + os.sep + resultPathPrefix):
-            os.mkdir(os.getcwd() + os.sep + resultPathPrefix)
+        if not os.path.exists(imageHPathPrefix):
+            os.mkdir(imageHPathPrefix)
+        if not os.path.exists(resultPathPrefix):
+            os.mkdir(resultPathPrefix)
 
     def faceDetect(self, imageName, haarxml, imagePathPrefix="image" + os.sep):
-
         self.logger.info(imageName)
         exData = {"image_name": imageName}
         exData.update({"image_path_name": imagePathPrefix + imageName})
@@ -48,6 +52,11 @@ class FaceDetect(object):
         faceXywh = []
         # Draw a rectangle around the faces
         for index, (x, y, w, h) in enumerate(faces):
+            x = int(x)
+            y = int(y)
+            w = int(w)
+            h = int(h)
+
             faceXywh.append([x, y, w, h])
             ul = (x, y)
             ll = (x, y + h)
@@ -73,7 +82,7 @@ class FaceDetect(object):
             return []
         p = p.replace("/", "\\")
         if p[-1] != "\\":
-            p = p+"\\"
+            p = p + "\\"
         a = os.listdir(p)
         b = [x for x in a if os.path.isfile(p + x)]
         return b
@@ -141,19 +150,19 @@ class FaceDetect(object):
             self.logger.info("\n\n")
 
     def detectImg(self, imageName):
-        cascPath1 = "xml" + os.sep + "haarcascade_frontalface_default.xml"
-        cascPath2 = "xml" + os.sep + "haarcascade_profileface.xml"
+        cascPath1 = os.path.join(XML_PATH, "haarcascade_frontalface_default.xml")
+        cascPath2 = os.path.join(XML_PATH, "haarcascade_profileface.xml")
 
         face_type = "front"
-        result = self.faceDetect(imageName, cascPath1)
+        result = self.faceDetect(imageName, cascPath1, self.imagePathPrefix)
         result.update({"face_type": face_type})
         response = {"error_code": "0", "ex_data": result}
         if result['face_num'] == 0:
             self.logger.info("正脸检测不到人脸，对%s做侧脸检测", imageName)
-            result2 = self.faceDetect(imageName, cascPath2)
+            result2 = self.faceDetect(imageName, cascPath2, self.imagePathPrefix)
             if result2['face_num'] == 0:
                 self.logger.info("侧脸检测不到人脸，对%s做水平翻转后侧脸检测", imageName)
-                imageHName = flip.flipHorizontal(imageName, self.imageHPathPrefix)
+                imageHName = flip.flipHorizontal(imageName, self.imageHPathPrefix, self.imagePathPrefix)
                 result3 = self.faceDetect(imageHName, cascPath2, self.imageHPathPrefix)
                 if result3['face_num'] == 0:
                     result.update()
@@ -168,9 +177,7 @@ class FaceDetect(object):
 
 
 if __name__ == "__main__":
-    faceDetect = FaceDetect()
+    faceDetect = FaceDetect(os.path.join(WEB_PATH, 'upload'))
     print(faceDetect.detectImg("13.jpg"))
     # faceDetect.startWithDir()
     pass
-
-
