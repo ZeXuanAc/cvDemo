@@ -16,7 +16,6 @@ def flipHorizontal(imageName, resultPathPrefix="imageH/", imagePathPrefix="image
     h_flip = cv.flip(img, 1)
     newPath = reName(imageName, "-h")
     cv.imwrite(resultPathPrefix + newPath, h_flip)
-    print("翻转侧脸图片生成完毕：" + newPath)
     return newPath
 
 
