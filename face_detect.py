@@ -21,15 +21,15 @@ class FaceDetect(object):
     def faceDetect(self, imageName, haarxml, imagePathPrefix="image" + os.sep):
 
         self.logger.info(imageName)
-        ex_data = {"image_name": imageName}
-        ex_data.update({"image_path_name": imagePathPrefix + imageName})
+        exData = {"image_name": imageName}
+        exData.update({"image_path_name": imagePathPrefix + imageName})
         # Create the haar cascade
         faceCascade = cv2.CascadeClassifier(haarxml)
 
         # Read the image
         image = cv2.imread(imagePathPrefix + imageName)
         self.logger.info("----图片大小，长：%s ---宽：%s", str(image.shape[1]), str(image.shape[0]))
-        ex_data.update({"image_width": image.shape[0], "image_height": image.shape[1]})
+        exData.update({"image_width": image.shape[0], "image_height": image.shape[1]})
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
         # Detect faces in the image
@@ -45,8 +45,10 @@ class FaceDetect(object):
 
         resultImg = image
         detected_face = []
+        faceXywh = []
         # Draw a rectangle around the faces
         for index, (x, y, w, h) in enumerate(faces):
+            faceXywh.append([x, y, w, h])
             ul = (x, y)
             ll = (x, y + h)
             ur = (x + w, y)
@@ -54,15 +56,15 @@ class FaceDetect(object):
             self.logger.info("----face[%s]位置%s, %s, %s, %s", str(index + 1), ul, ll, ur, lr)
             detected_face.append([ul, ll, ur, lr])
             resultImg = cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
-        ex_data.update({"face_num": len(faces)})
-        ex_data.update({"detected_face": detected_face})
+        exData.update({"face_num": len(faces)})
+        exData.update({"detected_face": detected_face})
+        exData.update({"faces": faceXywh})
         if len(faces) != 0:
             cv2.imwrite(flip.reName(self.resultPathPrefix + imageName, "-result"), resultImg)
 
         # cv2.imshow("Faces found", image)
         # cv2.waitKey(0)
-        print(ex_data)
-        return ex_data
+        return exData
 
     @staticmethod
     def getFileList(p):
@@ -76,40 +78,99 @@ class FaceDetect(object):
         b = [x for x in a if os.path.isfile(p + x)]
         return b
 
-    def getSuggestMsg(self, ex_data, face_type):
-        pass
+    def getSuggestMsg(self, exData, face_type):
+        suggestMsg = ""
+        if exData['face_num'] == 0:
+            suggestMsg = "请调整人脸摆放位置（未检测到人脸）"
+        if exData['face_num'] > 1:
+            suggestMsg = "请调整人脸摆放位置（人脸检测到多张脸）"
+        if exData['face_num'] == 1:
+            if face_type == "front":
+                suggestMsg += self.getDetectPosition(exData)
+            elif face_type == "profile":
+                suggestMsg = "请将脸向右倾转（" + self.getDetectPosition(exData) + "）"
+            elif face_type == "profile_h":
+                suggestMsg = "请将脸向左倾转（" + self.getDetectPosition(exData) + "）"
+            if self.getFaceSize(exData) != "":
+                suggestMsg + self.getFaceSize(exData)
+        return suggestMsg
 
-    def start(self):
+    def getFaceSize(self, exData):
+        faceArea = (exData['faces'][0][0] + exData['faces'][0][2]) * (exData['faces'][0][1] + exData['faces'][0][3])
+        imageArea = exData['image_width'] * exData['image_height']
+        suggestMsg = ""
+        if faceArea < imageArea * 1 / 9:
+            suggestMsg = "请将镜头靠近些"
+        if faceArea > imageArea * 1 / 4:
+            suggestMsg = "请将镜头离远些"
+        return suggestMsg
+
+    def getDetectPosition(self, exData):
+        perfect = True
+        suggestMsg = "请将头稍往"
+        imageWidth = exData['image_width']
+        imageHeight = exData['image_height']
+        errorFactor = 0.2
+        face = exData['faces']
+        faceCenter = (face[0][0] + face[0][2] / 2, face[0][1] + face[0][3] / 2)
+        if (faceCenter[0] - imageWidth / 2) > imageWidth * errorFactor:
+            perfect = False
+            suggestMsg += "左"
+        elif (imageWidth / 2 - faceCenter[0]) > imageWidth * errorFactor:
+            perfect = False
+            suggestMsg += "右"
+        if (faceCenter[1] - imageHeight / 2) > imageHeight * errorFactor:
+            perfect = False
+            suggestMsg += "上"
+        elif (imageHeight / 2 - faceCenter[1]) > imageHeight * errorFactor:
+            perfect = False
+            suggestMsg += "下"
+        suggestMsg += "方移"
+        if perfect:
+            suggestMsg = "位置完美"
+        return suggestMsg
+
+    def startWithDir(self):
         imageDir = os.getcwd() + os.sep + self.imagePathPrefix
-        cascPath1 = "xml" + os.sep + "haarcascade_frontalface_default.xml"
-        cascPath2 = "xml" + os.sep + "haarcascade_profileface.xml"
 
         images = self.getFileList(imageDir)
-        errorList = []
 
         self.logger.info("\n======人脸检测======\n\n")
         for i in range(images.__len__()):
-            result1 = self.faceDetect(images[i], cascPath1)
-            if result1['face_num'] == 0:
-                self.logger.info("正脸检测不到人脸，对%s做侧脸检测", images[i])
-                result2 = self.faceDetect(images[i], cascPath2)
-                if result2['face_num'] == 0:
-                    self.logger.info("侧脸检测不到人脸，对%s做水平翻转后侧脸检测", images[i])
-                    imageHName = flip.flipHorizontal(images[i], self.imageHPathPrefix)
-                    result3 = self.faceDetect(imageHName, cascPath2, self.imageHPathPrefix)
-                    if result3 != "1":
-                        errorList.append(result3['image_path_name'])
-            else:
-                result1.update({"suggest_msg": self.getSuggestMsg(result1, "front")})
+            self.logger.info(self.detectImg(images[i]))
             self.logger.info("\n\n")
-        self.logger.info("本次图像检测共%s张图片，检测到%s张含有类似人脸的图片， %s张未检测到人脸"
-              , images.__len__(), images.__len__() - errorList.__len__(), errorList.__len__())
-        self.logger.info("未检测到的人脸图片为：" + ",".join(errorList))
+
+    def detectImg(self, imageName):
+        cascPath1 = "xml" + os.sep + "haarcascade_frontalface_default.xml"
+        cascPath2 = "xml" + os.sep + "haarcascade_profileface.xml"
+
+        face_type = "front"
+        result = self.faceDetect(imageName, cascPath1)
+        result.update({"face_type": face_type})
+        response = {"error_code": "0", "ex_data": result}
+        if result['face_num'] == 0:
+            self.logger.info("正脸检测不到人脸，对%s做侧脸检测", imageName)
+            result2 = self.faceDetect(imageName, cascPath2)
+            if result2['face_num'] == 0:
+                self.logger.info("侧脸检测不到人脸，对%s做水平翻转后侧脸检测", imageName)
+                imageHName = flip.flipHorizontal(imageName, self.imageHPathPrefix)
+                result3 = self.faceDetect(imageHName, cascPath2, self.imageHPathPrefix)
+                if result3['face_num'] == 0:
+                    result.update()
+                else:
+                    face_type = "profile_h"
+                    result.update(result3)
+            else:
+                face_type = "profile"
+                result.update(result2)
+        result.update({"suggest_msg": self.getSuggestMsg(result, face_type), "face_type": face_type})
+        return response
 
 
 if __name__ == "__main__":
     faceDetect = FaceDetect()
-    faceDetect.start()
+    print(faceDetect.detectImg("13.jpg"))
+    # faceDetect.startWithDir()
     pass
 
 
