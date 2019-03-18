@@ -4,15 +4,14 @@ from flask import Flask, render_template, jsonify, request
 import time
 import os
 from detect.face_detect import FaceDetect
-from detect import detect_path
 
 WEB_PATH = os.path.dirname(os.path.realpath(__file__))
 
-app = Flask(__name__, template_folder='./templates')
+app = Flask(__name__, template_folder='./templates', static_folder="./static", static_url_path="/image")
 UPLOAD_FOLDER = 'upload'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 basedir = os.path.abspath(os.path.dirname(__file__))
-ALLOWED_EXTENSIONS = set(['txt', 'png', 'jpg', 'xls', 'JPG', 'PNG', 'xlsx', 'gif', 'GIF'])
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'JPG', 'PNG'}
 
 
 # 用于判断文件后缀
@@ -39,7 +38,8 @@ def api_upload():
         unix_time = int(time.time())
         new_filename = ext[0] + '_' + str(unix_time) + '.' + ext[1]  # 修改了上传的文件名
         f.save(os.path.join(file_dir, new_filename))  # 保存文件到upload目录
-        faceDetect = FaceDetect(os.path.join(WEB_PATH, 'upload'), os.path.join(WEB_PATH, 'upload_flip'), os.path.join(detect_path, 'result'))
+        faceDetect = FaceDetect(os.path.join(WEB_PATH, 'upload'), os.path.join(WEB_PATH, 'upload_flip'),
+                                os.path.join(basedir, 'static', 'result'))
         faces = faceDetect.detectImg(new_filename)
         # detect(new_filename)
         return jsonify(faces)
