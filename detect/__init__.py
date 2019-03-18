@@ -1,2 +1,3 @@
+# -*- coding:utf-8 -*-
 import os
-detect_path = os.path.dirname(os.path.realpath(__file__))
+DETECT_PATH = os.path.dirname(os.path.realpath(__file__))

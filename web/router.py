@@ -3,17 +3,15 @@ from werkzeug.utils import secure_filename
 from flask import Flask, render_template, jsonify, request
 import time
 import os
-from detect.detect_api import detect, array_get
 from detect.face_detect import FaceDetect
-from detect import detect_path
 
 WEB_PATH = os.path.dirname(os.path.realpath(__file__))
 
-app = Flask(__name__, template_folder='./templates')
+app = Flask(__name__, template_folder='./templates', static_folder="./static", static_url_path="/image")
 UPLOAD_FOLDER = 'upload'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 basedir = os.path.abspath(os.path.dirname(__file__))
-ALLOWED_EXTENSIONS = set(['txt', 'png', 'jpg', 'xls', 'JPG', 'PNG', 'xlsx', 'gif', 'GIF'])
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'JPG', 'PNG'}
 
 
 # 用于判断文件后缀
@@ -25,13 +23,6 @@ def allowed_file(filename):
 @app.route('/')
 def upload_test():
     return render_template('index.html')
-
-
-# 用于测试上传，稍后用到
-@app.route('/array')
-def array_test():
-    aaa = array_get()
-    return jsonify(aaa)
 
 
 # 上传文件
@@ -51,7 +42,8 @@ def api_upload():
         f.save(os.path.join(file_dir, new_filename))  # 保存文件到upload目录
         # token = base64.b64encode(new_filename)
         # print(token)
-        faceDetect = FaceDetect(os.path.join(WEB_PATH, 'upload'), os.path.join(WEB_PATH, 'upload_flip'), "C:\\Users\\viruser.v-desktop\\Desktop\\123")
+        faceDetect = FaceDetect(os.path.join(WEB_PATH, 'upload'), os.path.join(WEB_PATH, 'upload_flip'),
+                                os.path.join(basedir, 'static', 'result'))
         faces = faceDetect.detectImg(new_filename)
         # detect(new_filename)
         return jsonify(faces)

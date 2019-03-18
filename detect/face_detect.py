@@ -1,3 +1,4 @@
+# -*- coding:utf-8 -*-
 import cv2
 import os
 from detect import flip
