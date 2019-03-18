@@ -1,3 +1,4 @@
+# -*- coding:utf-8 -*-
 import cv2
 import os
 from detect import flip
@@ -11,7 +12,6 @@ WEB_PATH = os.path.dirname(os.path.realpath(__file__))
 class FaceDetect(object):
 
     def __init__(self, imagePathPrefix="image", imageHPathPrefix="imageH", resultPathPrefix="result", scaleFactor=1.2):
-
         logging.config.fileConfig(os.path.join(CONFIG_PATH, "logger.conf"))  # 采用配置文件
         self.logger = logging.getLogger("file")
         self.imagePathPrefix = imagePathPrefix + os.sep
@@ -71,8 +71,6 @@ class FaceDetect(object):
         if len(faces) != 0:
             cv2.imwrite(flip.reName(self.resultPathPrefix + imageName, "-result"), resultImg)
 
-        # cv2.imshow("Faces found", image)
-        # cv2.waitKey(0)
         return exData
 
     @staticmethod
@@ -104,7 +102,8 @@ class FaceDetect(object):
                 suggestMsg + self.getFaceSize(exData)
         return suggestMsg
 
-    def getFaceSize(self, exData):
+    @staticmethod
+    def getFaceSize(exData):
         faceArea = (exData['faces'][0][0] + exData['faces'][0][2]) * (exData['faces'][0][1] + exData['faces'][0][3])
         imageArea = exData['image_width'] * exData['image_height']
         suggestMsg = ""
@@ -114,12 +113,13 @@ class FaceDetect(object):
             suggestMsg = "请将镜头离远些"
         return suggestMsg
 
-    def getDetectPosition(self, exData):
+    @staticmethod
+    def getDetectPosition(exData):
         perfect = True
         suggestMsg = "请将头稍往"
         imageWidth = exData['image_width']
         imageHeight = exData['image_height']
-        errorFactor = 0.2
+        errorFactor = 0.18
         face = exData['faces']
         faceCenter = (face[0][0] + face[0][2] / 2, face[0][1] + face[0][3] / 2)
         if (faceCenter[0] - imageWidth / 2) > imageWidth * errorFactor:
@@ -139,8 +139,15 @@ class FaceDetect(object):
             suggestMsg = "位置完美"
         return suggestMsg
 
+    @staticmethod
+    def getErrorCode(exData):
+        faceNum = exData['face_num'] - 1
+        if exData['face_num'] > 1:
+            faceNum = -2
+        return faceNum
+
     def startWithDir(self):
-        imageDir = os.getcwd() + os.sep + self.imagePathPrefix
+        imageDir = self.imagePathPrefix
 
         images = self.getFileList(imageDir)
 
@@ -165,7 +172,7 @@ class FaceDetect(object):
                 imageHName = flip.flipHorizontal(imageName, self.imageHPathPrefix, self.imagePathPrefix)
                 result3 = self.faceDetect(imageHName, cascPath2, self.imageHPathPrefix)
                 if result3['face_num'] == 0:
-                    result.update()
+                    result.update(result3)
                 else:
                     face_type = "profile_h"
                     result.update(result3)
@@ -173,6 +180,7 @@ class FaceDetect(object):
                 face_type = "profile"
                 result.update(result2)
         result.update({"suggest_msg": self.getSuggestMsg(result, face_type), "face_type": face_type})
+        response.update({"error_code": self.getErrorCode(result)})
         return response
 
 
