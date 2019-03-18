@@ -45,9 +45,9 @@ def api_upload():
     if f and allowed_file(f.filename):  # 判断是否是允许上传的文件类型
         fname = secure_filename(f.filename)
         print(fname)
-        ext = fname.rsplit('.', 1)[1]  # 获取文件后缀
+        ext = fname.rsplit('.', 1)  # 获取文件后缀
         unix_time = int(time.time())
-        new_filename = str(unix_time) + '.' + ext  # 修改了上传的文件名
+        new_filename = ext[0] + '_' + str(unix_time) + '.' + ext[1]  # 修改了上传的文件名
         f.save(os.path.join(file_dir, new_filename))  # 保存文件到upload目录
         # token = base64.b64encode(new_filename)
         # print(token)
