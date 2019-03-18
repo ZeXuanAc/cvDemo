@@ -28,20 +28,16 @@ def upload_test():
 # 上传文件
 @app.route('/api/upload', methods=['POST'])
 def api_upload():
-    print(basedir)
     file_dir = os.path.join(basedir, app.config['UPLOAD_FOLDER'])
     if not os.path.exists(file_dir):
         os.makedirs(file_dir)
     f = request.files['myfile']  # 从表单的file字段获取文件，myfile为该表单的name值
     if f and allowed_file(f.filename):  # 判断是否是允许上传的文件类型
         fname = secure_filename(f.filename)
-        print(fname)
         ext = fname.rsplit('.', 1)  # 获取文件后缀
         unix_time = int(time.time())
         new_filename = ext[0] + '_' + str(unix_time) + '.' + ext[1]  # 修改了上传的文件名
         f.save(os.path.join(file_dir, new_filename))  # 保存文件到upload目录
-        # token = base64.b64encode(new_filename)
-        # print(token)
         faceDetect = FaceDetect(os.path.join(WEB_PATH, 'upload'), os.path.join(WEB_PATH, 'upload_flip'),
                                 os.path.join(basedir, 'static', 'result'))
         faces = faceDetect.detectImg(new_filename)

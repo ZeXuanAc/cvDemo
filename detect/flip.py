@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 import cv2 as cv
 
+
 def reName(imagePath, suffix):
     imagePathSplit = imagePath.split(".")
     imagePathSplit[-2] = imagePathSplit[-2] + suffix
