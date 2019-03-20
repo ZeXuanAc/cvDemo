@@ -2,18 +2,13 @@
 import cv2
 import os
 from detect import flip
-import logging.config
-from configs import CONFIG_PATH
 from detect.xml import XML_PATH
-
+from configs import LOGGER
 WEB_PATH = os.path.dirname(os.path.realpath(__file__))
 
 
 class FaceDetect(object):
-
     def __init__(self, imagePathPrefix="image", imageHPathPrefix="imageH", resultPathPrefix="result", scaleFactor=1.2):
-        logging.config.fileConfig(os.path.join(CONFIG_PATH, "logger.conf"))  # 采用配置文件
-        self.logger = logging.getLogger("file")
         self.imagePathPrefix = imagePathPrefix + os.sep
         self.resultPathPrefix = resultPathPrefix + os.sep
         self.imageHPathPrefix = imageHPathPrefix + os.sep
@@ -24,7 +19,7 @@ class FaceDetect(object):
             os.mkdir(resultPathPrefix)
 
     def faceDetect(self, imageName, haarxml, imagePathPrefix="image" + os.sep):
-        self.logger.info(imageName)
+        LOGGER.info(imageName)
         exData = {"image_name": imageName}
         exData.update({"image_path_name": imagePathPrefix + imageName})
         # Create the haar cascade
@@ -32,7 +27,7 @@ class FaceDetect(object):
 
         # Read the image
         image = cv2.imread(imagePathPrefix + imageName)
-        self.logger.info("----图片大小，长：%s ---宽：%s", str(image.shape[1]), str(image.shape[0]))
+        LOGGER.info("----图片大小，长：%s ---宽：%s", str(image.shape[1]), str(image.shape[0]))
         exData.update({"image_width": image.shape[0], "image_height": image.shape[1]})
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
@@ -45,7 +40,7 @@ class FaceDetect(object):
             flags=cv2.CASCADE_SCALE_IMAGE
         )
 
-        self.logger.info("----Found %s faces!", len(faces))
+        LOGGER.info("----Found %s faces!", len(faces))
 
         resultImg = image
         detected_face = []
@@ -62,7 +57,7 @@ class FaceDetect(object):
             ll = (x, y + h)
             ur = (x + w, y)
             lr = (x + w, y + h)
-            self.logger.info("----face[%s]位置%s, %s, %s, %s", str(index + 1), ul, ll, ur, lr)
+            LOGGER.info("----face[%s]位置%s, %s, %s, %s", str(index + 1), ul, ll, ur, lr)
             detected_face.append([ul, ll, ur, lr])
             resultImg = cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
         exData.update({"face_num": len(faces)})
@@ -151,10 +146,10 @@ class FaceDetect(object):
 
         images = self.getFileList(imageDir)
 
-        self.logger.info("\n======人脸检测======\n\n")
+        LOGGER.info("\n======人脸检测======\n\n")
         for i in range(images.__len__()):
-            self.logger.info(self.detectImg(images[i]))
-            self.logger.info("\n\n")
+            LOGGER.info(self.detectImg(images[i]))
+            LOGGER.info("\n\n")
 
     def detectImg(self, imageName):
         cascPath1 = os.path.join(XML_PATH, "haarcascade_frontalface_default.xml")
@@ -165,10 +160,10 @@ class FaceDetect(object):
         result.update({"face_type": face_type})
         response = {"error_code": "0", "ex_data": result}
         if result['face_num'] == 0:
-            self.logger.info("正脸检测不到人脸，对%s做侧脸检测", imageName)
+            LOGGER.info("正脸检测不到人脸，对%s做侧脸检测", imageName)
             result2 = self.faceDetect(imageName, cascPath2, self.imagePathPrefix)
             if result2['face_num'] == 0:
-                self.logger.info("侧脸检测不到人脸，对%s做水平翻转后侧脸检测", imageName)
+                LOGGER.info("侧脸检测不到人脸，对%s做水平翻转后侧脸检测", imageName)
                 imageHName = flip.flipHorizontal(imageName, self.imageHPathPrefix, self.imagePathPrefix)
                 result3 = self.faceDetect(imageHName, cascPath2, self.imageHPathPrefix)
                 if result3['face_num'] == 0:
